@@ -35,6 +35,7 @@ exports.LineWebhook = functions.region("asia-southeast1").https.onRequest(async 
                 message.includes('ออกงาน') ||
                 message.includes('ห้องน้ำ') ||
                 message.includes('สูบบุหรี่')
+                message.includes('กลับมา')
             ) {
                 const user = event.source.userId; // Assuming userId is available
                 const timestamp = moment().format(); // Get current timestamp
