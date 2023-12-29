@@ -29,6 +29,8 @@ exports.LineBot = functions.https.onRequest(async (req, res) => {
   }
 });
 
+let previousAction = null;
+
 const handleMessages = async (body) => {
   const event = body.events[0];
 
@@ -45,35 +47,42 @@ const handleMessages = async (body) => {
 
       // Save time_in of เข้างาน in the database
       await saveTime(user, 'getin', timestamp);
+      previousAction = 'getin';
     } else if (messageText.includes('พักครั้งที่1')) {
       console.log('Handling พักครั้งที่1'); 
 
       // Save time_in of พักครั้งที่1 in the database
       await saveTime(user, 'break1', timestamp);
       await reply(event.replyToken, 'บันทึกเวลาสำเร็จ');
-    }  else if (messageText.includes('พักครั้งที่2')) {
+      previousAction = 'break1';
+    } else if (messageText.includes('พักครั้งที่2')) {
       console.log('Handling พักครั้งที่2'); 
 
       await saveTime(user, 'break2', timestamp);
       await reply(event.replyToken, 'บันทึกเวลาสำเร็จ');
+      previousAction = 'break2';
     } else if (messageText.includes('ห้องน้ำ+สูบบุหรี่')) {
       console.log('Handling ห้องน้ำ+สูบบุหรี่'); 
 
       await saveTime(user, 'freebreak', timestamp);
       await reply(event.replyToken, 'บันทึกเวลาสำเร็จ');
+      previousAction = 'freebreak';
     } else if (messageText.includes('ออกงาน')) {
       console.log('Handling ออกงาน'); 
 
       await saveTime(user, 'getin', timestamp, true);
       await reply(event.replyToken, 'บันทึกเวลาสำเร็จ');
-    } else if (messageText.includes('กลับมา')) {
+      previousAction = 'getin';
+    } else if (messageText.includes('กลับมา') && previousAction) {
       console.log('Handling กลับมา'); 
 
-      await saveTime(user, 'break1', timestamp, true);
+      // Save time_out of the previous action and calculate sum
+      await saveTime(user, previousAction, timestamp, true);
       await reply(event.replyToken, 'บันทึกเวลาสำเร็จ');
     }
   }
 };
+
 
 const reply = async (replyToken, text) => {
   await request({
@@ -106,7 +115,6 @@ const saveTime = async (userId, collectionName, timestamp, isReturn) => {
       const data = existingRecord.docs[0].data();
 
       if (isReturn) {
-        // Update the existing document with time_out and calculate sum
         const timeOut = formattedTime.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
         const diffInMinutes = (formattedTime - data.time_in.toDate()) / (1000 * 60);
 
